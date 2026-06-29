@@ -1,0 +1,84 @@
+name: home-library
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: home-library-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-library}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-library}
+      POSTGRES_DB: ${POSTGRES_DB:-library}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-library} -d ${POSTGRES_DB:-library}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ------------------------------------
+  # YOUR SERVICES — uncomment and adjust
+  # -------------------------------------
+
+  # api:
+  #   build:
+  #     context: ./src/Api
+  #   environment:
+  #     ConnectionStrings__Library: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-library};Username=${POSTGRES_USER:-library};Password=${POSTGRES_PASSWORD:-library}"
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  # web:
+  #   build:
+  #     context: ./src/web
+  #   ports:
+  #     - "4200:80"
+  #   depends_on:
+  #     - api
+
+  # ---------------------------------------------------------------------
+  # BONUS — RabbitMQ + a separate worker.
+  # Only needed if you attempt the messaging bonus. In the core
+  # assignment the API writes to Postgres directly, so you can ignore
+  # everything below. If you do want to try: uncomment rabbitmq and worker,
+  # add the RabbitMq__* env vars to the api service above, and have the
+  # api publish rows (instead of inserting) while the worker consumes and
+  # inserts them.
+  # ---------------------------------------------------------------------
+
+  # rabbitmq:
+  #   image: rabbitmq:3.13-management
+  #   container_name: home-library-rabbitmq
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+  #     RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+  #   ports:
+  #     - "${RABBITMQ_PORT:-5672}:5672"        # AMQP
+  #     - "${RABBITMQ_MGMT_PORT:-15672}:15672" # management UI
+  #   healthcheck:
+  #     test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 10
+
+  # worker:
+  #   build:
+  #     context: ./src/Worker
+  #   environment:
+  #     ConnectionStrings__Library: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-library};Username=${POSTGRES_USER:-library};Password=${POSTGRES_PASSWORD:-library}"
+  #     RabbitMq__HostName: rabbitmq
+  #     RabbitMq__UserName: ${RABBITMQ_USER:-guest}
+  #     RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
+  #     postgres:
+  #       condition: service_healthy
+
+volumes:
+  postgres-data:
