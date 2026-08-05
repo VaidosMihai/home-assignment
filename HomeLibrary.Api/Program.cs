@@ -7,12 +7,19 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<LibraryContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Library")));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Adaugă acest bloc pentru a crea automat baza de date și tabela la pornirea API-ului
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<LibraryContext>();
+    dbContext.Database.EnsureCreated();
+}
 
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -40,8 +47,15 @@ app.MapPost("/api/imports", async (IFormFile file, LibraryContext db) =>
                 var name = csv.GetField(0);
                 var author = csv.GetField(1);
                 var genre = csv.GetField(2);
+                // Skip column name
+                if (string.Equals(name, "name", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(author, "author", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(genre, "genre", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
 
-                // Skip not okey values
+                // Dacă rândul este gol sau lipsesc date esențiale (ex: autorul sau genul e tăiat/incomplet), îl sărim în loc să dăm eroare
                 if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(author) || string.IsNullOrWhiteSpace(genre))
                     continue;
 
@@ -54,9 +68,9 @@ app.MapPost("/api/imports", async (IFormFile file, LibraryContext db) =>
                 });
             }
         }
-        catch
+        catch (Exception ex)
         {
-            return Results.BadRequest(new { error = "Failed to parse CSV file." });
+            return Results.BadRequest(new { error = "Failed to parse CSV file.", details = ex.Message });
         }
     }
 
@@ -67,7 +81,7 @@ app.MapPost("/api/imports", async (IFormFile file, LibraryContext db) =>
     }
 
     return Results.Ok(new { imported = booksToInsert.Count });
-});
+}).DisableAntiforgery();
 
 // 2. Endpoint GET /api/books
 app.MapGet("/api/books", async (LibraryContext db) =>
