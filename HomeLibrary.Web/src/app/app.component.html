@@ -1,0 +1,35 @@
+<div style="padding: 20px; font-family: Arial, sans-serif;">
+  <h2>Home Library Manager</h2>
+
+  <!-- CSV Upload Section -->
+  <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px;">
+    <h3>Import Books (CSV)</h3>
+    <input type="file" (change)="onFileSelected($event)" accept=".csv" />
+    <button (click)="uploadCsv()" style="margin-left: 10px; padding: 5px 15px;">Upload File</button>
+    <p *ngIf="message" [style.color]="isError ? 'red' : 'green'">{{ message }}</p>
+  </div>
+
+  <!-- Books Table -->
+  <h3>Library Books List</h3>
+  <table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr style="background-color: #f2f2f2;">
+        <th>ID</th>
+        <th>Name</th>
+        <th>Author</th>
+        <th>Year</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let book of books">
+        <td>{{ book.id }}</td>
+        <td>{{ book.name }}</td>
+        <td>{{ book.author }}</td>
+        <td>{{ book.year }}</td>
+      </tr>
+      <tr *ngIf="books.length === 0">
+        <td colspan="4" style="text-align: center;">No books found in the library.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
