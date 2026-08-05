@@ -44,7 +44,7 @@ export class AppComponent implements OnInit {
 
     this.http.post('/api/imports', formData).subscribe({
       next: (res: any) => {
-        this.message = `Import successful! Added books count: ${res.importedCount}`;
+        this.message = `Import successful! Added books count: ${res.imported}`;
         this.isError = false;
         this.loadBooks();
       },

@@ -17,7 +17,7 @@
         <th>ID</th>
         <th>Name</th>
         <th>Author</th>
-        <th>Year</th>
+        <th>Genre</th>
       </tr>
     </thead>
     <tbody>
@@ -25,7 +25,7 @@
         <td>{{ book.id }}</td>
         <td>{{ book.name }}</td>
         <td>{{ book.author }}</td>
-        <td>{{ book.year }}</td>
+        <td>{{ book.genre }}</td>
       </tr>
       <tr *ngIf="books.length === 0">
         <td colspan="4" style="text-align: center;">No books found in the library.</td>
