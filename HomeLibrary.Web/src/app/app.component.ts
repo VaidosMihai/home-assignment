@@ -12,8 +12,10 @@ import { HttpClient } from '@angular/common/http';
 export class AppComponent implements OnInit {
   books: any[] = [];
   selectedFile: File | null = null;
+  selectedFileName: string = '';
   message: string = '';
   isError: boolean = false;
+  isDragging: boolean = false;
 
   constructor(private http: HttpClient) {}
 
@@ -29,7 +31,47 @@ export class AppComponent implements OnInit {
   }
 
   onFileSelected(event: any) {
-    this.selectedFile = event.target.files[0];
+    const file = event.target.files[0];
+    this.processFile(file);
+  }
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = true;
+  }
+
+  onDragLeave(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+  }
+
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+
+    if (event.dataTransfer && event.dataTransfer.files.length > 0) {
+      const file = event.dataTransfer.files[0];
+      this.processFile(file);
+    }
+  }
+
+  processFile(file: File) {
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      this.message = 'Invalid file type. Please upload a .csv file.';
+      this.isError = true;
+      this.selectedFile = null;
+      this.selectedFileName = '';
+      return;
+    }
+
+    this.selectedFile = file;
+    this.selectedFileName = file.name;
+    this.message = '';
   }
 
   uploadCsv() {
@@ -46,6 +88,8 @@ export class AppComponent implements OnInit {
       next: (res: any) => {
         this.message = `Import successful! Added books count: ${res.imported}`;
         this.isError = false;
+        this.selectedFile = null;
+        this.selectedFileName = '';
         this.loadBooks();
       },
       error: (err) => {
