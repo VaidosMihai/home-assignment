@@ -16,6 +16,7 @@ export class AppComponent implements OnInit {
   message: string = '';
   isError: boolean = false;
   isDragging: boolean = false;
+  pollingIntervalId: number | null = null;
 
   constructor(private http: HttpClient) {}
 
@@ -74,6 +75,23 @@ export class AppComponent implements OnInit {
     this.message = '';
   }
 
+  startPolling() {
+    if (this.pollingIntervalId !== null) {
+      return;
+    }
+
+    this.pollingIntervalId = window.setInterval(() => {
+      this.loadBooks();
+    }, 2000);
+  }
+
+  stopPolling() {
+    if (this.pollingIntervalId !== null) {
+      window.clearInterval(this.pollingIntervalId);
+      this.pollingIntervalId = null;
+    }
+  }
+
   uploadCsv() {
     if (!this.selectedFile) {
       this.message = 'Please select a CSV file first!';
@@ -86,11 +104,11 @@ export class AppComponent implements OnInit {
 
     this.http.post('/api/imports', formData).subscribe({
       next: (res: any) => {
-        this.message = `Import successful! Added books count: ${res.imported}`;
+        this.message = `Import queued! Added books count: ${res.imported}`;
         this.isError = false;
         this.selectedFile = null;
         this.selectedFileName = '';
-        this.loadBooks();
+        this.startPolling();
       },
       error: (err) => {
         this.message = 'Error importing the CSV file.';
