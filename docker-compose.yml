@@ -23,10 +23,15 @@ services:
       context: ./HomeLibrary.Api
     environment:
       ConnectionStrings__Library: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-library};Username=${POSTGRES_USER:-library};Password=${POSTGRES_PASSWORD:-library}"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
     ports:
       - "8080:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   web:
@@ -47,34 +52,35 @@ services:
   # inserts them.
   # ---------------------------------------------------------------------
 
-  # rabbitmq:
-  #   image: rabbitmq:3.13-management
-  #   container_name: home-library-rabbitmq
-  #   environment:
-  #     RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-  #     RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
-  #   ports:
-  #     - "${RABBITMQ_PORT:-5672}:5672"        # AMQP
-  #     - "${RABBITMQ_MGMT_PORT:-15672}:15672" # management UI
-  #   healthcheck:
-  #     test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 10
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: home-library-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  # worker:
-  #   build:
-  #     context: ./src/Worker
-  #   environment:
-  #     ConnectionStrings__Library: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-library};Username=${POSTGRES_USER:-library};Password=${POSTGRES_PASSWORD:-library}"
-  #     RabbitMq__HostName: rabbitmq
-  #     RabbitMq__UserName: ${RABBITMQ_USER:-guest}
-  #     RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #     postgres:
-  #       condition: service_healthy
+  worker:
+    build:
+      context: .
+      dockerfile: ./src/Worker/Dockerfile
+    environment:
+      ConnectionStrings__Library: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-library};Username=${POSTGRES_USER:-library};Password=${POSTGRES_PASSWORD:-library}"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres-data:
