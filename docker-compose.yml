@@ -18,28 +18,24 @@ services:
       timeout: 5s
       retries: 10
 
-  # ------------------------------------
-  # YOUR SERVICES — uncomment and adjust
-  # -------------------------------------
+  api:
+    build:
+      context: ./HomeLibrary.Api
+    environment:
+      ConnectionStrings__Library: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-library};Username=${POSTGRES_USER:-library};Password=${POSTGRES_PASSWORD:-library}"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-  # api:
-  #   build:
-  #     context: ./src/Api
-  #   environment:
-  #     ConnectionStrings__Library: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-library};Username=${POSTGRES_USER:-library};Password=${POSTGRES_PASSWORD:-library}"
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-
-  # web:
-  #   build:
-  #     context: ./src/web
-  #   ports:
-  #     - "4200:80"
-  #   depends_on:
-  #     - api
+  web:
+    build:
+      context: ./HomeLibrary.Web
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
 
   # ---------------------------------------------------------------------
   # BONUS — RabbitMQ + a separate worker.
