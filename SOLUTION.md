@@ -2,40 +2,68 @@
 
 ## How to Run
 
-Ensure you have Docker and Docker Compose installed. From the root directory of the project, run:
+Ensure Docker and Docker Compose are installed. From the project root, run:
 
 ```bash
 docker compose up -d --build
+```
 
-Once the containers are built and running, you can access the application:
+Once the containers are running, the application is available at:
 
-Web UI (Angular): http://localhost:4200
+- Web UI: http://localhost:4200
+- API: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger
+- RabbitMQ Management UI: http://localhost:15672
 
-API (ASP.NET Core): http://localhost:8080 (Swagger UI available at /swagger)
+## Architecture & Design Decisions
 
-Architecture & Design Decisions
-Vertical Slice: Built as a complete, modern full-stack application featuring a REST API backend, PostgreSQL database, and an Angular standalone frontend UI.
+This solution follows a vertical-slice architecture built around a full-stack workflow:
 
-CSV Parsing: Utilized CsvHelper to efficiently stream and parse incoming CSV files line by line. The application gracefully skips the header row and automatically ignores empty or malformed rows without failing the entire batch.
+- Angular standalone frontend for upload and table visualization
+- ASP.NET Core minimal API for CSV import and book listing
+- PostgreSQL database through EF Core
+- RabbitMQ producer/worker bonus flow for asynchronous import persistence
 
-Database & Resilience (Graceful Startup): Used Entity Framework Core with PostgreSQL. Implemented a robust database retry/connection check mechanism at startup so the API safely waits if the PostgreSQL container is still initializing during docker compose up.
+### CSV Parsing
+The upload flow uses `CsvHelper` to stream CSV rows safely and skip the metadata header row. Empty or malformed rows are ignored without breaking the batch import.
 
-Frontend & UX: Developed using Angular (Standalone Components) with plain CSS (no heavy component libraries) for a clean, readable, and responsive layout. Added modern Drag-and-Drop functionality with real-time file validation to ensure only .csv files are accepted.
+### Messaging Bonus
+The API now publishes parsed rows into a RabbitMQ queue, and a dedicated worker consumes those messages and persists them into PostgreSQL. This enables asynchronous processing and a clean producer/consumer separation.
 
-Containerization: Fully containerized with custom Dockerfile configurations for both the API and frontend, orchestrated cleanly via docker-compose.yml.
+### Frontend Behavior
+The Angular UI supports drag-and-drop upload validation for `.csv` files. After a successful import, the frontend polls the book list every 2 seconds to reflect the eventual database state.
 
-Assumptions Made
-The CSV file always contains a standard header row (name, author, genre), which is skipped during processing.
+### Database & Startup Resilience
+The application uses EF Core with PostgreSQL and performs startup schema creation safely so the API can tolerate the database container still initializing during `docker compose up`.
 
-The import_date is automatically generated on the server/database side in UTC upon successful insertion.
+### Containerization
+The stack is orchestrated through `docker-compose.yml` with separate services for:
 
-Small to medium-sized CSV files are expected, allowing direct batch processing within the request lifecycle.
+- API
+- Web UI
+- PostgreSQL
+- RabbitMQ
+- Background worker
 
-What I Would Improve With More Time
-Implement comprehensive automated unit and integration tests for both API endpoints and the CSV parsing service.
+## Assumptions
 
-Add asynchronous message broker integration (such as RabbitMQ with a background worker service) to handle high-volume bulk imports asynchronously in production scenarios.
+- The CSV input always contains a standard header row in the order `name, author, genre`.
+- The header row is intentionally skipped during parsing.
+- `import_date` is generated on the server side in UTC once a row is inserted.
+- The application is intended for small to medium CSV imports in the core assignment, while RabbitMQ is used as a production-style asynchronous bonus.
 
-Implement client-side pagination and sorting for large library datasets.
+## Tests Added
+
+A dedicated `HomeLibrary.Tests` project was added with unit tests covering CSV parsing behavior for:
+
+- valid rows parsing
+- skipping of empty or malformed rows
+- object initialization expectations
+
+## Possible Future Improvements
+
+- Add integration tests for the API import endpoint and worker persistence flow
+- Expand observability with structured logs and queue metrics
+- Add pagination and sorting for larger book datasets
 
 ```
